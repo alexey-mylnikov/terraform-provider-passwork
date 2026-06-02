@@ -26,3 +26,7 @@ install:
 .PHONY: generate
 generate:
 	go generate ./...
+
+.PHONY: docs
+docs:
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name passwork

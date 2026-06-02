@@ -1,0 +1,19 @@
+---
+page_title: "Passwork Provider"
+description: |-
+  Manage Passwork vaults, folders, and password items with Terraform.
+---
+
+# Passwork Provider
+
+The Passwork provider allows Terraform to manage resources in [Passwork](https://passwork.pro) — a self-hosted password manager for teams.
+
+## Token refresh and session caching
+
+Passwork API tokens are short-lived. On first use, supply `access_token` and `refresh_token`. The provider automatically refreshes tokens when they expire and caches the new pair in `.terraform/passwork_session` (AES-encrypted). Subsequent runs load the cached session, so you only need to visit the Passwork UI again when both tokens have expired (typically after months).
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
