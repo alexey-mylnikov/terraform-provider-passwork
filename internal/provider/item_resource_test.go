@@ -20,7 +20,7 @@ func TestItemToModel_BasicFields(t *testing.T) {
 		Password:    "s3cr3t",
 		URL:         "https://example.com",
 		Description: "desc",
-		Tags: []string{"tag1", "tag2"},
+		Tags:        []string{"tag1", "tag2"},
 	}
 
 	m, diags := itemToModel(ctx, item)
