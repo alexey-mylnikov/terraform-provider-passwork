@@ -127,7 +127,6 @@ resource "passwork_item" "example" {
   url         = "postgresql://prod.db.example.com:5432/mydb"
   description = "Production database credentials"
   tags        = ["database", "production"]
-  color_code  = 1
 
   custom_fields = [
     { name = "Port", type = "text",     value = "5432"    },
@@ -136,7 +135,7 @@ resource "passwork_item" "example" {
 }
 ```
 
-**Arguments:** `name`, `vault_id` (required, forces replacement), `folder_id`, `login`, `password` (sensitive), `url`, `description`, `tags`, `color_code`, `custom_fields`  
+**Arguments:** `name`, `vault_id` (required, forces replacement), `folder_id`, `login`, `password` (sensitive), `url`, `description`, `tags`, `custom_fields`  
 **Attributes:** `id`
 
 > On `terraform destroy` the item is moved to the Passwork bin (soft delete), not permanently removed.
