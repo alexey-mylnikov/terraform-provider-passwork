@@ -53,6 +53,6 @@ variable "passwork_refresh_token" {
 - `master_key` (String, Sensitive) Pre-derived master key (base64) for client-side encryption. Mutually exclusive with `master_password`. May also be set via `PASSWORK_MASTER_KEY`.
 - `master_password` (String, Sensitive) Master password for client-side encryption. Mutually exclusive with `master_key`. May also be set via `PASSWORK_MASTER_PASSWORD`.
 - `refresh_token` (String, Sensitive) API refresh token used to obtain a new access token when the current one expires. May also be set via `PASSWORK_REFRESH_TOKEN`.
-- `session_cache_file` (String) Path to the session cache file. Defaults to `.terraform/passwork_session` relative to the Terraform workspace. The provider persists refreshed tokens here so subsequent runs reuse them automatically.
+- `session_cache_file` (String) Path to the session cache file. Defaults to `~/.terraform.d/passwork/sessions/<host-hash>/session`, shared across all Terraform workspaces that target the same Passwork instance. Override only when you need workspace-level isolation.
 - `session_encryption_key` (String, Sensitive) Hex-encoded AES key used to encrypt the session cache file. When omitted a random key is generated on first use and stored alongside the cache file.
 - `skip_tls_verify` (Boolean) Disable TLS certificate verification. Use only in development environments.

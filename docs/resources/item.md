@@ -31,7 +31,6 @@ resource "passwork_item" "example" {
   url         = "postgresql://prod.db.example.com:5432/mydb"
   description = "Production PostgreSQL credentials"
   tags        = ["database", "production"]
-  color_code  = 1
 
   custom_fields = [
     {
