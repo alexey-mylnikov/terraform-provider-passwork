@@ -78,7 +78,7 @@ func (p *PassworkProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 				Optional:            true,
 			},
 			"session_cache_file": schema.StringAttribute{
-				MarkdownDescription: "Path to the session cache file. Defaults to `.terraform/passwork_session` relative to the Terraform workspace. The provider persists refreshed tokens here so subsequent runs reuse them automatically.",
+				MarkdownDescription: "Path to the session cache file. Defaults to `~/.terraform.d/passwork/sessions/<host-hash>/session`, shared across all Terraform workspaces that target the same Passwork instance. Override only when you need workspace-level isolation.",
 				Optional:            true,
 			},
 			"session_encryption_key": schema.StringAttribute{
@@ -104,12 +104,14 @@ func (p *PassworkProvider) Configure(ctx context.Context, req provider.Configure
 	masterPassword := envOr(cfg.MasterPassword, "PASSWORK_MASTER_PASSWORD", "")
 	masterKey := envOr(cfg.MasterKey, "PASSWORK_MASTER_KEY", "")
 
-	sessionFile := envOr(cfg.SessionCacheFile, "PASSWORK_SESSION_CACHE_FILE", defaultSessionFile)
-	sessionKeyFile := defaultSessionKeyFile
+	// Compute default session paths keyed by host so all workspaces pointing
+	// at the same Passwork instance share one session automatically.
+	defaultFile, defaultKeyFile := defaultSessionPaths(host)
+	sessionFile := envOr(cfg.SessionCacheFile, "PASSWORK_SESSION_CACHE_FILE", defaultFile)
+	sessionKeyFile := defaultKeyFile
 	if !cfg.SessionEncryptionKey.IsNull() && !cfg.SessionEncryptionKey.IsUnknown() {
-		// When the user provides an explicit key, skip the auto-generated key
-		// file and use the provided value directly via a blank keyFile so
-		// ensureSessionKey returns it from the hex literal path.
+		// When the user provides an explicit encryption key, skip the
+		// auto-generated key file and pass the value inline.
 		sessionKeyFile = ""
 	}
 

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -10,11 +11,6 @@ import (
 	"sync"
 
 	"github.com/alexey-mylnikov/passwork-go/passwork"
-)
-
-const (
-	defaultSessionFile    = ".terraform/passwork_session"
-	defaultSessionKeyFile = ".terraform/passwork_session.key"
 )
 
 // pwClient wraps the passwork Client to add session persistence.
@@ -77,6 +73,22 @@ func newClient(
 
 	c.saveSession()
 	return c, nil
+}
+
+// defaultSessionPaths returns the global session file and key file paths for
+// the given host. Sessions are stored under ~/.terraform.d/passwork/sessions/
+// in a directory named by the first 8 bytes of SHA-256(host), so each
+// Passwork instance gets its own slot and all Terraform workspaces pointing at
+// the same host share one session automatically.
+func defaultSessionPaths(host string) (sessionFile, keyFile string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		// Unreachable in practice; fall back to cwd-relative path.
+		return ".terraform/passwork_session", ".terraform/passwork_session.key"
+	}
+	sum := sha256.Sum256([]byte(host))
+	dir := filepath.Join(home, ".terraform.d", "passwork", "sessions", hex.EncodeToString(sum[:8]))
+	return filepath.Join(dir, "session"), filepath.Join(dir, "session.key")
 }
 
 // tryLoadSession attempts to restore a previously saved session from disk.

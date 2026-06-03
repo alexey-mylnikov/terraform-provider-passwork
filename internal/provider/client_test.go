@@ -81,3 +81,34 @@ func TestTryLoadSession_EmptySessionFile(t *testing.T) {
 		t.Error("expected false when sessionFile is empty")
 	}
 }
+
+func TestDefaultSessionPaths_DifferentHostsGetDifferentPaths(t *testing.T) {
+	f1, k1 := defaultSessionPaths("https://passwork.example.com")
+	f2, k2 := defaultSessionPaths("https://other.example.com")
+
+	if f1 == f2 {
+		t.Error("different hosts must produce different session file paths")
+	}
+	if k1 == k2 {
+		t.Error("different hosts must produce different key file paths")
+	}
+}
+
+func TestDefaultSessionPaths_SameHostGetsSamePath(t *testing.T) {
+	f1, _ := defaultSessionPaths("https://passwork.example.com")
+	f2, _ := defaultSessionPaths("https://passwork.example.com")
+
+	if f1 != f2 {
+		t.Error("same host must always produce the same session file path")
+	}
+}
+
+func TestDefaultSessionPaths_UnderTerraformD(t *testing.T) {
+	f, _ := defaultSessionPaths("https://passwork.example.com")
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".terraform.d", "passwork", "sessions")
+
+	if !filepath.HasPrefix(f, expected) {
+		t.Errorf("session path %q should be under %q", f, expected)
+	}
+}
