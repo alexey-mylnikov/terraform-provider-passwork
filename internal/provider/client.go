@@ -50,29 +50,67 @@ func newClient(
 		inlineKey:      sessionEncryptionKey,
 	}
 
-	loaded := c.tryLoadSession(ctx)
+	if err := c.authenticate(ctx, accessToken, refreshToken, masterPassword, masterKey); err != nil {
+		return nil, err
+	}
 
+	c.saveSession()
+	return c, nil
+}
+
+// authenticate establishes a working session on c, preferring a cached
+// session loaded from disk when one is available. A cached session only has
+// to decrypt successfully to be tried — it may still be dead (both its
+// access and refresh tokens expired, or purged server-side after a long
+// TTL), which the server reports as a plain 401 rather than the
+// "accessTokenExpired" code that triggers transparent refresh. When that
+// happens, fall back to the token pair from the provider configuration
+// instead of surfacing the error immediately, so a freshly issued
+// access_token/refresh_token is not silently ignored in favour of a stale
+// cache.
+func (c *pwClient) authenticate(ctx context.Context, accessToken, refreshToken, masterPassword, masterKey string) error {
+	loaded := c.tryLoadSession(ctx)
 	if !loaded {
-		c.SetTokens(accessToken, refreshToken)
-		if masterPassword != "" {
-			if err := c.SetMasterPassword(ctx, masterPassword); err != nil {
-				return nil, fmt.Errorf("set master password: %w", err)
-			}
-		} else if masterKey != "" {
-			if err := c.SetMasterKey(ctx, masterKey); err != nil {
-				return nil, fmt.Errorf("set master key: %w", err)
-			}
+		if err := c.applyConfiguredTokens(ctx, accessToken, refreshToken, masterPassword, masterKey); err != nil {
+			return err
 		}
 	}
 
 	// Verify connectivity; WithAutoRefresh will transparently renew an expired
 	// access token. The result is discarded — we only care about auth success.
-	if _, err := c.GetFeatures(ctx); err != nil {
-		return nil, fmt.Errorf("passwork: authentication failed: %w", err)
+	_, cacheErr := c.GetFeatures(ctx)
+	if cacheErr == nil {
+		return nil
+	}
+	if !loaded {
+		return fmt.Errorf("passwork: authentication failed: %w", cacheErr)
 	}
 
-	c.saveSession()
-	return c, nil
+	// The cached session turned out to be unusable. Retry once with the
+	// token pair from provider configuration before giving up.
+	if err := c.applyConfiguredTokens(ctx, accessToken, refreshToken, masterPassword, masterKey); err != nil {
+		return fmt.Errorf("passwork: authentication failed: cached session invalid (%v), and %w", cacheErr, err)
+	}
+	if _, err := c.GetFeatures(ctx); err != nil {
+		return fmt.Errorf("passwork: authentication failed: cached session invalid (%v), configured credentials also failed: %w", cacheErr, err)
+	}
+	return nil
+}
+
+// applyConfiguredTokens sets the client to use the access/refresh token pair
+// from provider configuration, along with client-side encryption if requested.
+func (c *pwClient) applyConfiguredTokens(ctx context.Context, accessToken, refreshToken, masterPassword, masterKey string) error {
+	c.SetTokens(accessToken, refreshToken)
+	if masterPassword != "" {
+		if err := c.SetMasterPassword(ctx, masterPassword); err != nil {
+			return fmt.Errorf("set master password: %w", err)
+		}
+	} else if masterKey != "" {
+		if err := c.SetMasterKey(ctx, masterKey); err != nil {
+			return fmt.Errorf("set master key: %w", err)
+		}
+	}
+	return nil
 }
 
 // defaultSessionPaths returns the global session file and key file paths for
